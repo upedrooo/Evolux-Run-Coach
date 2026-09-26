@@ -1,0 +1,20 @@
+{
+  "name": "evolux-portfolio",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Portfólio do Evolux: documentação, decisões técnicas e exemplos de código com testes.",
+  "type": "module",
+  "scripts": {
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "@electric-sql/pglite": "^0.5.8",
+    "@types/node": "^24.13.6",
+    "@types/react": "^19",
+    "fast-xml-parser": "^5.11.1",
+    "react": "^19.2.8",
+    "typescript": "^5",
+    "vitest": "^5.0.2"
+  }
+}
