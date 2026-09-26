@@ -125,17 +125,9 @@ npm run typecheck
 
 Front-end moderno, back-end e APIs, modelagem e segurança de banco de dados, integração com LLM em produção, testes, DevOps e UX/acessibilidade. O mapa completo, com onde ver cada evidência, está em [`docs/skills.md`](docs/skills.md).
 
-## Próximos passos
-
-- Página de política de privacidade e termos (o app coleta dados de saúde, que exigem tratamento específico na LGPD)
-- Segundo provedor de LLM como reserva, para reduzir indisponibilidade do plano gratuito
-- Validação de conteúdo dos treinos (duração × ritmo × distância)
-- Importação direta por conta (OAuth) em vez de arquivos, quando houver parcerias com os apps
-- Camada anti-abuso no cadastro (captcha e limite por IP)
-
 ## Contato
 
-**[Seu Nome]** · [LinkedIn](https://linkedin.com/in/seu-perfil) · [seu-email@exemplo.com](mailto:seu-email@exemplo.com)
+**Pedro Silva** · [LinkedIn](https://www.linkedin.com/in/pedro-lucas-silva-6b1678358/?isSelfProfile=true) · [pedrol09872@gmail.com](mailto:pedrol09872@gmail.com)
 
 ## Licença
 
