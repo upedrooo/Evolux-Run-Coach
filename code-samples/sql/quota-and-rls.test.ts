@@ -1,6 +1,6 @@
 /**
- * Teste do SQL rodando num PostgreSQL de verdade, embutido no processo (PGlite, WebAssembly).
- * Sem Docker e sem conta em nenhum serviço: simulamos o schema `auth` e os papéis do Supabase.
+ * SQL tests running against a real, in-process PostgreSQL instance (PGlite, WebAssembly).
+ * No Docker and no external accounts: we simulate Supabase's `auth` schema and roles locally.
  */
 import { readFileSync } from "node:fs";
 import { PGlite } from "@electric-sql/pglite";
@@ -25,19 +25,19 @@ beforeAll(async () => {
   await db.exec(`insert into auth.users (id) values ('${A}'), ('${B}');`);
 });
 
-/** Executa `fn` "como" um papel do Supabase e volta ao normal no fim. */
+/** Executes `fn` as a given Supabase role and resets the role afterward. */
 async function asRole(role: string, sub: string | null, fn: () => Promise<void>) {
   await db.exec(`set role ${role}; select set_config('request.jwt.claim.sub', '${sub ?? ""}', false);`);
   try { await fn(); } finally { await db.exec("reset role;"); }
 }
 
-describe("cota e isolamento de dados", () => {
-  it("cria o perfil automaticamente quando o usuário se cadastra (trigger)", async () => {
+describe("quota and data isolation", () => {
+  it("automatically creates a profile when a user signs up (trigger)", async () => {
     const r = await db.query<{ id: string }>("select id from public.profiles order by id");
     expect(r.rows.map((x) => x.id)).toEqual([A, B]);
   });
 
-  it("reserva no máximo N vagas e depois recusa", async () => {
+  it("reserves at most N slots and then rejects further requests", async () => {
     await asRole("service_role", null, async () => {
       const results: boolean[] = [];
       for (let i = 0; i < 5; i++) {
@@ -48,7 +48,7 @@ describe("cota e isolamento de dados", () => {
     });
   });
 
-  it("devolve uma vaga e nunca deixa o contador negativo", async () => {
+  it("refunds a slot and never lets the counter drop below zero", async () => {
     await asRole("service_role", null, async () => {
       await db.query("select public.refund_plan_slot($1)", [A]);
       expect((await db.query<{ plans_used: number }>("select plans_used from public.profiles where id=$1", [A])).rows[0].plans_used).toBe(2);
@@ -57,14 +57,14 @@ describe("cota e isolamento de dados", () => {
     });
   });
 
-  it("usuário logado NÃO consegue chamar as funções de cota (senão devolveria vagas para si)", async () => {
+  it("authenticated users CANNOT call quota functions (otherwise they could refund themselves)", async () => {
     await asRole("authenticated", A, async () => {
       await expect(db.query("select public.refund_plan_slot($1)", [A])).rejects.toThrow(/permission denied/i);
       await expect(db.query("select public.claim_plan_slot($1, 999)", [A])).rejects.toThrow(/permission denied/i);
     });
   });
 
-  it("RLS: cada usuário só lê o que é seu; escrever direto é bloqueado", async () => {
+  it("RLS: each user only reads their own rows; direct writes are blocked", async () => {
     await asRole("service_role", null, async () => {
       for (const u of [A, B]) await db.query("insert into public.plans (user_id, goal, plan) values ($1, '10 km', '{}')", [u]);
     });

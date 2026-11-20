@@ -1,14 +1,15 @@
 /**
- * Cliente de LLM resiliente: lista de modelos com prazo POR modelo.
+ * Resilient LLM client: model fallback list with a PER-MODEL timeout.
  *
- * Problema real (plano gratuito de uma API de LLM): um modelo "sobrecarregado" pode levar ~40 s só para devolver
- * um erro 503. Com um único prazo global de 42 s, esse modelo consumia o orçamento inteiro e o modelo seguinte
- * nunca chegava a ser tentado.
+ * Real-world problem (free-tier LLM API): an overloaded model can take ~40 s just to return
+ * a 503 error. With a single global 42 s timeout, that one model consumed the entire budget and
+ * the next model was never even tried.
  *
- * Solução: cada modelo (exceto o último) recebe um prazo curto; estourou, ocupado ou descontinuado → tenta o próximo.
- * O último modelo usa todo o tempo que restar. Erros "de verdade" (500, resposta inválida) NÃO passam ao próximo.
+ * Solution: every model (except the last) gets a short deadline; if it times out, is busy, or is
+ * unavailable → try the next one. The last model gets whatever time remains. Genuine failures
+ * (500, malformed response) do NOT fall through to the next model.
  *
- * Técnicas: AbortSignal.timeout, AbortSignal.any (combina o prazo do modelo com o prazo geral) e erros tipados.
+ * Techniques: AbortSignal.timeout, AbortSignal.any (combines per-model and overall deadlines), and typed errors.
  */
 
 export type LlmErrorKind = "busy" | "unavailable" | "timeout" | "failed";
@@ -32,7 +33,7 @@ export async function callWithFallback(
     const model = models[i];
     const isLast = i === models.length - 1;
 
-    // prazo próprio do modelo (exceto o último), combinado com o prazo geral da requisição
+    // per-model deadline (except for the last model), combined with the overall request deadline
     const own = isLast ? undefined : AbortSignal.timeout(opts.perModelMs);
     const signal = own && opts.signal ? AbortSignal.any([opts.signal, own]) : (own ?? opts.signal);
 
@@ -49,6 +50,6 @@ export async function callWithFallback(
   }
 
   throw sawBusy
-    ? new LlmError("O provedor de IA está sobrecarregado.", "busy")
-    : new LlmError("Nenhum modelo configurado está disponível.", "unavailable");
+    ? new LlmError("The AI provider is currently overloaded.", "busy")
+    : new LlmError("No configured model is available.", "unavailable");
 }

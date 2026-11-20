@@ -12,61 +12,61 @@ const ctx: Context = {
   maxQualitySessions: 1,
 };
 
-/** Um plano que respeita todas as regras (simula uma IA obediente). */
+/** A plan that satisfies every rule (simulates an obedient AI). */
 const good = (): Plan => ({
   weeks: [
     { week: 1, sessions: [
-      { day: "tue", type: "easy", title: "Rodagem", distanceKm: 6 },
-      { day: "thu", type: "tempo", title: "Limiar", distanceKm: 5 },
-      { day: "sun", type: "long", title: "Longão", distanceKm: 7 },
+      { day: "tue", type: "easy", title: "Easy Run", distanceKm: 6 },
+      { day: "thu", type: "tempo", title: "Threshold", distanceKm: 5 },
+      { day: "sun", type: "long", title: "Long Run", distanceKm: 7 },
     ] },
     { week: 2, sessions: [
-      { day: "tue", type: "easy", title: "Rodagem", distanceKm: 5 },
-      { day: "sun", type: "long", title: "Longão", distanceKm: 9 },
+      { day: "tue", type: "easy", title: "Easy Run", distanceKm: 5 },
+      { day: "sun", type: "long", title: "Long Run", distanceKm: 9 },
     ] },
   ],
 });
 
-describe("validação da resposta da IA", () => {
-  it("aceita um plano que segue as regras", () => {
+describe("AI output validation", () => {
+  it("accepts a plan that follows all rules", () => {
     expect(validatePlan(good(), ctx)).toEqual([]);
   });
 
-  it("rejeita número errado de semanas (e para por aí)", () => {
+  it("rejects the wrong number of weeks (and stops early)", () => {
     const p = good();
     p.weeks.pop();
     expect(validatePlan(p, ctx)).toHaveLength(1);
-    expect(validatePlan(p, ctx)[0]).toMatch(/exatamente 2 semanas/);
+    expect(validatePlan(p, ctx)[0]).toMatch(/exactly 2 weeks/);
   });
 
-  it("rejeita dia indisponível, dois treinos no mesmo dia e dois longões", () => {
+  it("rejects unavailable days, duplicate days, and multiple long runs", () => {
     const p = good();
     p.weeks[0].sessions[0].day = "mon";
     p.weeks[0].sessions[1].day = "sun";
     p.weeks[0].sessions.push({ day: "thu", type: "long", title: "x", distanceKm: 1 });
     const errors = validatePlan(p, ctx).join("\n");
-    expect(errors).toMatch(/dia "mon" não está entre os dias disponíveis/);
-    expect(errors).toMatch(/duas sessões no mesmo dia/);
-    expect(errors).toMatch(/mais de um treino longo/);
+    expect(errors).toMatch(/day "mon" is not in available days/);
+    expect(errors).toMatch(/two sessions on the same day/);
+    expect(errors).toMatch(/more than one long run/);
   });
 
-  it("rejeita volume fora da tolerância da meta e longão acima do teto", () => {
+  it("rejects out-of-tolerance mileage and long runs above the cap", () => {
     const p = good();
     p.weeks[0].sessions[2].distanceKm = 40;
     const errors = validatePlan(p, ctx).join("\n");
-    expect(errors).toMatch(/passa do limite de 14 km/);
-    expect(errors).toMatch(/a soma das corridas é 51.0 km/);
+    expect(errors).toMatch(/exceeds cap of 14 km/);
+    expect(errors).toMatch(/running total is 51.0 km/);
   });
 
-  it("rejeita intervalado em semana de recuperação", () => {
+  it("rejects intervals during a cutback week", () => {
     const p = good();
     p.weeks[1].sessions[0].type = "interval";
-    expect(validatePlan(p, ctx).join()).toMatch(/semana cutback não pode ter intervalado/);
+    expect(validatePlan(p, ctx).join()).toMatch(/cutback week cannot include intervals/);
   });
 
-  it("'descanso ativo' sem distância vira cross-training em vez de reprovar o plano", () => {
+  it("converts 'active rest' with no distance to cross-training instead of rejecting the plan", () => {
     const p = good();
-    p.weeks[1].sessions.push({ day: "thu", type: "recovery", title: "Descanso ativo", distanceKm: null });
+    p.weeks[1].sessions.push({ day: "thu", type: "recovery", title: "Active Rest", distanceKm: null });
     const fixed = normalizePlan(p);
     const s = fixed.weeks[1].sessions.at(-1)!;
     expect(s).toMatchObject({ type: "cross", distanceKm: null });

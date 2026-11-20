@@ -1,12 +1,12 @@
 /**
- * Guard-rails para a resposta da IA.
+ * Guardrails for LLM output.
  *
- * Princípio: NUNCA confiar cegamente na saída de uma LLM. O modelo escreve as sessões, mas o código
- * valida cada regra de segurança e, se algo estiver errado, devolve a lista de problemas para uma
- * nova tentativa ("self-repair"). Se a segunda falhar, o pedido é abortado e a cota do usuário é devolvida.
+ * Principle: NEVER blindly trust an LLM response. The model writes the sessions, while code
+ * validates every safety rule and—if anything is off—returns the exact list of issues for a
+ * retry ("self-repair"). If the second attempt still fails, the request aborts and the user's quota is refunded.
  *
- * Aqui há um subconjunto ilustrativo das regras; a lista completa cobre dias permitidos, treino longo,
- * sessões intensas, semanas de recuperação/polimento e a sessão da meta.
+ * This sample shows a representative subset of rules; the full validator checks allowed days, long runs,
+ * hard sessions, cutback/taper weeks, and the race/goal session.
  */
 
 export type SessionType = "easy" | "long" | "tempo" | "interval" | "recovery" | "race" | "strength" | "cross";
@@ -29,8 +29,8 @@ const isRun = (t: SessionType) => RUN_TYPES.includes(t);
 const km = (x?: number | null) => (typeof x === "number" ? x : 0);
 
 /**
- * Correção determinística ANTES de validar: uma "corrida" sem distância (ex.: "descanso ativo" rotulado
- * como recuperação) não conta quilometragem; vira cross-training em vez de reprovar o plano inteiro.
+ * Deterministic normalization BEFORE validation: a "run" without distance (e.g., "active rest" labeled
+ * as recovery) adds no mileage; convert it to cross-training instead of rejecting the entire plan.
  */
 export function normalizePlan(plan: Plan): Plan {
   return {
@@ -45,16 +45,16 @@ export function normalizePlan(plan: Plan): Plan {
   };
 }
 
-/** Devolve a lista de problemas (vazia = plano aceito). A lista é reenviada à IA na nova tentativa. */
+/** Returns a list of issues (empty = plan accepted). The list is sent back to the AI on retry. */
 export function validatePlan(plan: Plan, ctx: Context): string[] {
   const errors: string[] = [];
   if (plan.weeks.length !== ctx.weeks.length) {
-    return [`O plano deve ter exatamente ${ctx.weeks.length} semanas, mas veio com ${plan.weeks.length}.`];
+    return [`Plan must have exactly ${ctx.weeks.length} weeks, got ${plan.weeks.length}.`];
   }
 
   plan.weeks.forEach((w, i) => {
     const target = ctx.weeks[i];
-    const label = `Semana ${i + 1}`;
+    const label = `Week ${i + 1}`;
     const isGoalWeek = target.kind === "goal";
     const seen = new Set<Day>();
     let total = 0;
@@ -63,28 +63,28 @@ export function validatePlan(plan: Plan, ctx: Context): string[] {
 
     for (const s of w.sessions) {
       if (!ctx.availableDays.includes(s.day) && !(isGoalWeek && s.type === "race" && s.day === ctx.longRunDay)) {
-        errors.push(`${label}: dia "${s.day}" não está entre os dias disponíveis.`);
+        errors.push(`${label}: day "${s.day}" is not in available days.`);
       }
-      if (seen.has(s.day)) errors.push(`${label}: duas sessões no mesmo dia (${s.day}).`);
+      if (seen.has(s.day)) errors.push(`${label}: two sessions on the same day (${s.day}).`);
       seen.add(s.day);
 
       if (isRun(s.type)) total += km(s.distanceKm);
       if (s.type === "tempo" || s.type === "interval") quality++;
       if (s.type === "long") {
         longRuns++;
-        if (km(s.distanceKm) > ctx.longRunCapKm) errors.push(`${label}: treino longo de ${s.distanceKm} km passa do limite de ${ctx.longRunCapKm} km.`);
+        if (km(s.distanceKm) > ctx.longRunCapKm) errors.push(`${label}: long run of ${s.distanceKm} km exceeds cap of ${ctx.longRunCapKm} km.`);
       }
-      if (s.type === "interval" && target.kind !== "build") errors.push(`${label}: semana ${target.kind} não pode ter intervalado.`);
+      if (s.type === "interval" && target.kind !== "build") errors.push(`${label}: ${target.kind} week cannot include intervals.`);
     }
 
-    if (longRuns > 1) errors.push(`${label}: mais de um treino longo.`);
-    if (quality > ctx.maxQualitySessions) errors.push(`${label}: ${quality} sessões de qualidade (máximo ${ctx.maxQualitySessions}).`);
+    if (longRuns > 1) errors.push(`${label}: more than one long run.`);
+    if (quality > ctx.maxQualitySessions) errors.push(`${label}: ${quality} quality sessions (max ${ctx.maxQualitySessions}).`);
 
-    // O prompt pede ±10%; o código aceita ±15% (+1 km de folga) para não reprovar um bom plano por pouco.
+    // Prompt asks for ±10%; code accepts ±15% (+1 km buffer) to avoid rejecting a solid plan over minor rounding.
     const lo = target.targetKm * 0.85 - 1;
     const hi = target.targetKm * 1.15 + 1;
     if (total < lo || total > hi) {
-      errors.push(`${label}: a soma das corridas é ${total.toFixed(1)} km, mas a meta é ${target.targetKm} km.`);
+      errors.push(`${label}: running total is ${total.toFixed(1)} km, but target is ${target.targetKm} km.`);
     }
   });
 

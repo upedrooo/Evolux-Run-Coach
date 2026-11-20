@@ -1,13 +1,13 @@
 /**
- * "Esqueleto" de volume semanal: o código decide QUANTO correr em cada semana.
- * A IA depois decide COMO distribuir esse volume em sessões.
+ * Weekly volume "skeleton": code decides HOW MUCH to run each week.
+ * The AI then decides HOW to distribute that mileage across individual sessions.
  *
- * Regras implementadas (versão didática; os valores reais de produção são ajustados por nível e distância):
- *  - sobrecarga progressiva: a cada semana de construção, sobe no máximo `growth` (ex.: +8% a +10%);
- *  - semana de recuperação a cada 4ª semana (80% do volume anterior), para o corpo assimilar o treino;
- *  - polimento (taper) nas semanas finais, reduzindo o volume em relação ao pico;
- *  - a última semana é a "semana da meta": precisa comportar a distância-alvo + soltura antes dela;
- *  - o volume nunca passa do teto (`peakKm`).
+ * Rules implemented (didactic version; production values are tuned by level and goal distance):
+ *  - progressive overload: each build week grows by at most `growth` (e.g., +8% to +10%);
+ *  - cutback week every 4th week (80% of prior volume) so the body adapts;
+ *  - taper across the final weeks, dropping mileage relative to peak volume;
+ *  - the final week is the "goal week": must accommodate the target distance plus light shakeout runs;
+ *  - weekly volume never exceeds the ceiling (`peakKm`).
  */
 
 export type WeekKind = "build" | "cutback" | "taper" | "goal";
@@ -17,17 +17,17 @@ export type SkeletonInput = {
   weeks: number;
   startKm: number;
   peakKm: number;
-  /** ex.: 1.08 = +8% por semana */
+  /** e.g., 1.08 = +8% per week */
   growth: number;
   goalKm: number;
-  /** frações do pico nas semanas finais, ex.: [0.8, 0.6] */
+  /** fractions of peak volume for the final weeks, e.g., [0.8, 0.6] */
   taper: number[];
 };
 
 const round05 = (x: number) => Math.round(x * 2) / 2;
 
 export function buildWeeklyTargets(p: SkeletonInput): WeekTarget[] {
-  const taper = p.taper.slice(0, Math.max(0, p.weeks - 3)); // planos curtos mantêm ao menos 3 semanas de construção
+  const taper = p.taper.slice(0, Math.max(0, p.weeks - 3)); // short plans keep at least 3 build weeks
   const buildWeeks = p.weeks - taper.length;
 
   const out: WeekTarget[] = [];
@@ -38,7 +38,7 @@ export function buildWeeklyTargets(p: SkeletonInput): WeekTarget[] {
     if (week > buildWeeks) {
       const isGoalWeek = week === p.weeks;
       const fraction = taper[week - buildWeeks - 1];
-      const floor = isGoalWeek ? p.goalKm + 6 : 0; // a meta + ~6 km de soltura
+      const floor = isGoalWeek ? p.goalKm + 6 : 0; // goal distance + ~6 km shakeout
       out.push({ week, targetKm: round05(Math.max(peak * fraction, floor)), kind: isGoalWeek ? "goal" : "taper" });
     } else if (week === 1) {
       out.push({ week, targetKm: round05(prevBuild), kind: "build" });
@@ -53,7 +53,7 @@ export function buildWeeklyTargets(p: SkeletonInput): WeekTarget[] {
   return out;
 }
 
-/** Interpolação linear entre âncoras (ex.: teto de volume por distância-alvo); fora do intervalo, trava nas pontas. */
+/** Linear interpolation between anchor points (e.g., volume cap by goal distance); clamped outside range. */
 export function interpolate(anchors: [x: number, y: number][], x: number): number {
   if (x <= anchors[0][0]) return anchors[0][1];
   for (let i = 1; i < anchors.length; i++) {

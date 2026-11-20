@@ -1,33 +1,33 @@
-# Estratégia de testes
+# Testing Strategy
 
-## Visão geral
+## Overview
 
-**83 testes automatizados** no aplicativo (mais 1 teste "ao vivo" opcional contra a IA real), organizados por risco. Os exemplos deste repositório trazem uma amostra com **40 testes** que rodam sem nenhuma conta ou serviço externo.
+**83 automated tests** in the production app (plus 1 optional "live" smoke test against the real LLM), organized by risk. The code samples in this repository include a **40-test** subset that runs locally with zero external accounts or services.
 
-| Camada | O que cobre | Ferramentas |
+| Layer | Coverage | Tools |
 |---|---|---|
-| **Parsers de arquivos** | GPX, TCX, FIT, CSV (Strava e Runkeeper), ZIP, GZ; esportes ignorados; duplicatas; arquivos inválidos; saltos de GPS e pausas | Vitest; arquivos **sintéticos**, inclusive FIT gerado por um codificador |
-| **Algoritmos do treino** | VDOT contra tabelas publicadas, progressão de volume, recuperação e polimento, tetos, avisos calculados | Vitest, propriedades (ex.: "nunca sobe mais que X%") |
-| **Validação da IA** | Cada regra de segurança, normalização, prompt (inclusive texto do usuário como dado), tentativa de correção | Vitest com uma "IA obediente" e "IA rebelde" simuladas |
-| **Cliente de LLM** | Formato da requisição, fallback entre modelos, prazo por modelo, tratamento de 429/503/404/500 | Vitest com `fetch` simulado |
-| **Banco de dados** | Limite atômico, devolução de vaga, gatilho de perfil, permissões e RLS | **PGlite** (PostgreSQL real em WebAssembly), papéis do Supabase simulados |
-| **Fluxo ponta a ponta** | Login por código, assistente de 3 passos, geração da ficha, limite de 3, devolução de vaga em falhas | Servidor simulado de Supabase e Gemini + navegador real |
-| **QA visual** | Capturas automatizadas de todas as telas em vários tamanhos; medição de rolagem e overflow | Puppeteer com Chrome |
+| **File parsers** | GPX, TCX, FIT, CSV (Strava & Runkeeper), ZIP, GZ; non-running sports; duplicates; malformed files; GPS spikes and auto-pauses | Vitest; **synthetic** fixtures, including FIT files generated with a binary encoder |
+| **Training algorithms** | VDOT checked against published tables, mileage progression, cutback and taper weeks, volume caps, computed warnings | Vitest, property invariants (e.g., "never grows by more than X%") |
+| **AI validation** | Every safety rule, normalization, prompt assembly (including user text delimited as data), self-repair retry | Vitest with simulated "obedient AI" and "rebellious AI" |
+| **LLM client** | Request payload format, multi-model fallback, per-model deadlines, 429/503/404/500 handling | Vitest with mocked `fetch` |
+| **Database** | Atomic quota cap, slot refund, profile creation trigger, role permissions, and RLS | **PGlite** (real PostgreSQL in WebAssembly) with simulated Supabase roles |
+| **End-to-end flow** | OTP sign-in, 3-step wizard, plan generation, 3-plan quota cap, slot refund on failure | Local mock Supabase & Gemini server + real browser |
+| **Visual QA** | Automated screenshots of every screen across multiple viewports; scroll and overflow measurements | Puppeteer + Chrome |
 
-## Práticas que valem destacar
+## Practices Worth Highlighting
 
-- **Testar o SQL como código:** as políticas RLS, permissões e funções de cota rodam num PostgreSQL embutido, incluindo o cenário em que um usuário logado tenta chamar a função de devolução de vaga e é bloqueado.
-- **Dados de teste realistas sem dados reais:** GPX gerados com pausas e saltos de GPS, CSVs com o cabeçalho duplicado do Strava, FIT montado com o codificador da própria biblioteca.
-- **Simular o pior comportamento da IA:** respostas com JSON em blocos de markdown, semanas faltando, dias indisponíveis, volume fora da meta, e uma IA que erra a primeira tentativa e acerta a segunda.
-- **Testes de propriedade em algoritmos:** em vez de só comparar um número, verificar invariantes ("o volume nunca ultrapassa o teto", "a semana de recuperação é menor que a anterior").
-- **Injeção de dependências** no fluxo da API, para testar todos os desvios (sem login, limite, IA ocupada, falha ao salvar) sem rede nem banco.
-- **QA visual automatizado:** as capturas de tela do portfólio são geradas por script, e o próprio processo já apontou um defeito real de interface (o tempo-alvo aparecia como "0h 55min" no resumo).
+- **Testing SQL as code:** RLS policies, role grants, and quota functions execute inside an embedded PostgreSQL instance—including verifying that an authenticated user attempting to call `refund_plan_slot` is denied.
+- **Realistic fixtures without real user data:** synthetic GPX tracks with pauses and GPS jumps, CSVs replicating Strava's duplicate `Distance` header, and binary FIT files built with the library's own encoder.
+- **Simulating worst-case AI behavior:** JSON wrapped in markdown fences, missing weeks, unavailable days, out-of-range mileage, and a mock model that fails on attempt 1 and succeeds on attempt 2.
+- **Property checks on algorithms:** beyond exact snapshots, testing invariants ("volume never exceeds the cap", "cutback week is lower than the preceding week").
+- **Dependency injection** in the API flow so every branch (unauthenticated, quota reached, overloaded AI, DB save failure) is tested without network or database setup.
+- **Automated visual QA:** portfolio screenshots are generated by script, and the process itself caught a real UI bug (target time rendering as `"0h 55min"` in the summary).
 
-## Como rodar os exemplos
+## Running the Samples
 
 ```bash
 npm install
 npm test
 ```
 
-Veja o mapa completo em [`code-samples/README.md`](../code-samples/README.md).
+See the full sample index in [`code-samples/README.md`](../code-samples/README.md).

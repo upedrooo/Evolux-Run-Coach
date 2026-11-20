@@ -1,53 +1,53 @@
-# Onde entra a IA e onde entra o código
+# Where AI Fits and Where Code Fits
 
-**Regra de ouro:** tudo que é número, limite ou segurança é feito por **código determinístico**. A IA só **escolhe e escreve** as sessões, dentro de limites que o código impõe e revalida depois. Ela nunca inventa volume, ritmo ou datas.
+**Golden rule:** everything involving numbers, limits, or safety is handled by **deterministic code**. AI only **selects and writes** the workouts within boundaries that code enforces and revalidates afterward. It never invents volume, paces, or dates.
 
-Por que separar assim?
+Why split responsibilities this way?
 
-- **Exatidão:** modelos de linguagem erram conta. Fórmulas não.
-- **Segurança:** um plano de treino mal dimensionado pode machucar. Os limites de progressão não podem depender de um texto gerado.
-- **Custo e latência:** com o cálculo pronto, o prompt cabe em ~2 mil tokens e a resposta em ~4 mil, o que roda em modelos gratuitos.
-- **Testabilidade:** o que é código tem teste automatizado; o que é IA tem validação automática da saída.
+- **Accuracy:** language models make arithmetic mistakes. Formulas don't.
+- **Safety:** a poorly scaled training plan can cause injury. Progression limits cannot depend on generated text.
+- **Cost & latency:** with the math already done, the prompt fits in ~2k tokens and the response in ~4k, which runs on free-tier models.
+- **Testability:** code is covered by automated tests; AI output is checked by automated validators.
 
 ```mermaid
 flowchart LR
-  A["Formulário + arquivos"] --> B["CÓDIGO: métricas, VDOT, zonas, volume por semana, avisos"]
-  B --> C["IA: escolhe sessões, escreve textos"]
-  C --> D["CÓDIGO: valida regras, normaliza, calcula totais, insere ritmos"]
-  D -->|"reprovado"| C
-  D --> E["Ficha final"]
+  A["Form + files"] --> B["CODE: metrics, VDOT, zones, weekly volume, warnings"]
+  B --> C["AI: picks sessions, writes descriptions"]
+  C --> D["CODE: validates rules, normalizes, sums totals, injects paces"]
+  D -->|"rejected"| C
+  D --> E["Final plan"]
 ```
 
-## Feito por código
+## Handled by Code
 
-| O quê | Como |
+| Area | How |
 |---|---|
-| **Leitura dos arquivos** | GPX, TCX, FIT, CSV e ZIP viram só data, distância, tempo, FC e altimetria. Filtra corridas plausíveis e remove duplicatas. Roda no navegador. |
-| **Análise do histórico** | Km por semana, média das últimas 4 semanas, corridas por semana, treino mais longo, ritmo médio e melhor esforço. |
-| **Ritmos de treino** | Zonas leve/maratona/limiar/intervalado/repetição pelo VDOT (modelo de Daniels) e a zona do **ritmo-alvo** da meta pedida. Ver [`pace-zones.ts`](../code-samples/typescript/pace-zones.ts). |
-| **Estrutura do plano** | Nº de semanas conforme a distância, volume de cada semana (progressão limitada, recuperação a cada 4ª semana, polimento, semana da meta), tetos por nível e distância, treino longo no fim de semana. Ver [`training-skeleton.ts`](../code-samples/typescript/training-skeleton.ts). |
-| **Avisos** | Meta de tempo muito acima do histórico, tempo-alvo sem histórico para avaliar, prazo curto para a distância, ausência de treinos enviados. |
-| **Validação da resposta** | Nº de semanas, dias permitidos, um treino longo por semana, volume dentro da meta, limite de sessões intensas, sem intervalado em semana de recuperação, sessão da meta no dia e distância certos. Ver [`llm-output-guards.ts`](../code-samples/typescript/llm-output-guards.ts). |
-| **Acabamento** | Soma o km de cada semana (ignora totais da IA), calcula a data de cada sessão, insere as faixas de ritmo a partir da zona escolhida. |
-| **Controle de uso** | Limite de fichas por conta, atômico no banco; devolução da vaga em qualquer falha; troca automática de modelo. Ver [`quota-and-rls.sql`](../code-samples/sql/quota-and-rls.sql) e [`llm-fallback.ts`](../code-samples/typescript/llm-fallback.ts). |
+| **File parsing** | GPX, TCX, FIT, CSV, and ZIP files are reduced to date, distance, duration, HR, and elevation. Filters plausible runs and removes duplicates. Runs in the browser. |
+| **History analysis** | Weekly km, 4-week rolling average, runs per week, longest run, average pace, and best effort. |
+| **Training paces** | Easy / Marathon / Threshold / Interval / Repetition zones via VDOT (Daniels' model) plus the **target pace** zone for the user's goal. See [`pace-zones.ts`](../code-samples/typescript/pace-zones.ts). |
+| **Plan structure** | Number of weeks based on distance, per-week target volume (capped progression, cutback every 4th week, taper, goal week), caps by level and distance, weekend long run. See [`training-skeleton.ts`](../code-samples/typescript/training-skeleton.ts). |
+| **Warnings** | Goal time far above history, target time without history to evaluate, short timeline for the distance, or no workouts uploaded. |
+| **Output validation** | Week count, allowed days, at most one long run per week, volume within tolerance, cap on hard sessions, no intervals during cutback/taper, race/goal session on the right day and distance. See [`llm-output-guards.ts`](../code-samples/typescript/llm-output-guards.ts). |
+| **Post-processing** | Recomputes weekly mileage totals (ignoring LLM sums), calculates exact calendar dates for each session, and injects pace ranges from the chosen zone. |
+| **Usage control** | Atomic per-account plan quota in PostgreSQL, automatic slot refund on any failure, and multi-model fallback. See [`quota-and-rls.sql`](../code-samples/sql/quota-and-rls.sql) and [`llm-fallback.ts`](../code-samples/typescript/llm-fallback.ts). |
 
-## Feito pela IA
+## Handled by AI
 
-- Escolher **quais sessões** cada semana terá (leve, tempo, intervalado, longo, recuperação, força, cross-training) e como dividir o volume da semana entre elas.
-- **Escrever** títulos e descrições, o foco e a dica de cada semana e o resumo do plano.
-- Escolher a **zona de ritmo** de cada sessão. O valor numérico do ritmo é inserido pelo código.
-- Interpretar as **informações adicionais** do usuário (por exemplo, uma lesão) e reduzir o impacto, incluindo cross-training e um aviso para buscar avaliação profissional.
+- Choosing **which sessions** go into each week (easy, tempo, interval, long, recovery, strength, cross-training) and distributing weekly volume across them.
+- **Writing** titles, descriptions, weekly focus notes, tips, and the overall plan summary.
+- Selecting the **pace zone** for each session. The actual numeric pace range is injected by code.
+- Interpreting the user's **additional notes** (e.g., an injury) to reduce impact, add cross-training, and include a note recommending professional medical evaluation.
 
-## Como a IA é contida
+## How AI Is Constrained
 
-1. **Prompt com regras explícitas** e estrutura pronta (volume por semana, dias, zonas disponíveis).
-2. **Texto do usuário tratado como dado**, delimitado no prompt, com instrução de ignorar qualquer pedido dentro dele.
-3. **Saída em JSON** validada por esquema (zod) e depois por regras de negócio.
-4. **Autocorreção:** na reprovação, uma nova tentativa recebe a lista exata de erros. Se falhar de novo, o pedido é abortado e a cota do usuário é devolvida.
+1. **Explicit rules in the prompt** alongside the precomputed skeleton (weekly volume, available days, allowed zones).
+2. **User free-text treated strictly as data**, delimited inside the prompt with explicit instructions to ignore any commands embedded within it.
+3. **JSON output** validated against a Zod schema first, then checked by domain business rules.
+4. **Self-repair:** on rejection, a single retry receives the exact list of validation errors. If it fails again, the request is aborted and the user's quota slot is refunded.
 
-## Limites conhecidos (e como seriam tratados)
+## Known Limitations (and How They Would Be Addressed)
 
-- O **conteúdo** de cada treino (por exemplo, a estrutura de um intervalado) é da IA e só é validado em parte: o código garante quilometragem, dias e tipo, mas não a qualidade da progressão interna nem a coerência entre duração, distância e ritmo.
-- Lesões e condições de saúde dependem da interpretação do modelo; o código só limita a quantidade e o tipo de sessões intensas.
-- Os ritmos estimados a partir do histórico são **conservadores**, porque treinos costumam ser mais leves que uma prova.
-- O prompt pede ±10% no volume semanal, enquanto o código aceita ±15%, para não reprovar um bom plano por pouco.
+- The **internal structure** of individual workouts (e.g., interval reps) comes from the AI and is only partially validated: code guarantees mileage, days, and session type, not internal workout progression or strict duration-distance-pace coherence.
+- Injuries and health conditions rely on model interpretation; code only caps the count and type of high-intensity sessions.
+- Paces estimated from training history are **conservative**, since everyday runs are typically slower than all-out races.
+- The prompt asks for ±10% on weekly volume while code accepts ±15%, avoiding rejecting a solid plan over small rounding differences.

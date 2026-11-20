@@ -1,14 +1,14 @@
 /**
- * Leitura de um treino GPX no navegador.
+ * Client-side GPX workout parser (runs in the browser).
  *
- * Objetivo: extrair só o que importa para o plano (data, distância, tempo em movimento, FC média)
- * e DESCARTAR as coordenadas. O trajeto revela onde a pessoa mora; por privacidade, ele nunca sai do dispositivo.
+ * Goal: extract only what the training plan needs (date, distance, moving time, average HR)
+ * and DISCARD all coordinates. GPS routes reveal where a runner lives; for privacy, they never leave the device.
  *
- * Detalhes de robustez tratados aqui (aprendidos com arquivos reais):
- *  - pausas automáticas: intervalos > 60 s entre pontos não contam como "tempo em movimento";
- *  - saltos de GPS: velocidades impossíveis (> 43 km/h correndo) são ignoradas na distância;
- *  - namespaces XML (ex.: gpxtpx:hr) removidos para ler a frequência cardíaca;
- *  - esporte: descarta bicicleta/caminhada pelo <type> ou pelo nome do treino.
+ * Robustness edge cases handled here (learned from real exports):
+ *  - auto-pauses: gaps > 60 s between track points do not count as moving time;
+ *  - GPS spikes: impossible running speeds (> 43 km/h) are ignored in distance;
+ *  - XML namespaces (e.g., gpxtpx:hr) stripped so heart rate can be read reliably;
+ *  - sport filtering: skips cycling/walking via `<type>` or activity name.
  */
 import { XMLParser } from "fast-xml-parser";
 
@@ -22,7 +22,7 @@ const parser = new XMLParser({
   isArray: (name) => name === "trk" || name === "trkseg" || name === "trkpt",
 });
 
-/** Distância entre dois pontos (fórmula de Haversine), em metros. */
+/** Great-circle distance between two coordinates (Haversine formula), in meters. */
 export function haversineM(lat1: number, lon1: number, lat2: number, lon2: number): number {
   const R = 6371000;
   const rad = (x: number) => (x * Math.PI) / 180;
@@ -57,9 +57,9 @@ export function parseGpx(xml: string): Activity | null {
   let moving = 0;
   for (let i = 1; i < pts.length; i++) {
     const dt = (pts[i].t - pts[i - 1].t) / 1000;
-    if (dt <= 0 || dt > 60) continue; // pausa automática
+    if (dt <= 0 || dt > 60) continue; // auto-pause
     const d = haversineM(pts[i - 1].lat, pts[i - 1].lon, pts[i].lat, pts[i].lon);
-    if (d / dt > 12) continue; // salto de GPS
+    if (d / dt > 12) continue; // GPS spike
     distance += d;
     moving += dt;
   }

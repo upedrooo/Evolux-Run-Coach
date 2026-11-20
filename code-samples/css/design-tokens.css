@@ -1,14 +1,14 @@
 /*
- * Design tokens do Evolux (Tailwind CSS v4).
+ * Evolux design tokens (Tailwind CSS v4).
  *
- * Boas práticas demonstradas:
- *  - cores semânticas (accent / ok / warn / danger) em vez de valores soltos espalhados pelos componentes;
- *  - DOIS níveis de contorno, definidos por medição de contraste (WCAG 1.4.11 pede ≥ 3:1 para bordas de campos):
- *        --line         cartões e divisórias      ≈ 1,9 : 1  (visível, discreto)
- *        --line-strong  campos, botões, chips     ≈ 3,4 : 1  (controles claramente delimitados)
- *    A primeira versão usava #e6e0d5 (≈ 1,3 : 1), quase invisível sobre o fundo; foi corrigida trocando o token.
- *  - respeito a `prefers-reduced-motion`: animações e transições são desligadas globalmente;
- *  - regras de impressão (a ficha de treino pode ser salva em PDF).
+ * Best practices demonstrated:
+ *  - semantic colors (accent / ok / warn / danger) instead of raw hex values scattered across components;
+ *  - TWO border tiers defined by measured contrast (WCAG 1.4.11 requires ≥ 3:1 for UI control boundaries):
+ *        --line         cards and dividers        ≈ 1.9 : 1  (visible, subtle)
+ *        --line-strong  inputs, buttons, chips    ≈ 3.4 : 1  (clearly delineated controls)
+ *    The first version used #e6e0d5 (≈ 1.3 : 1), nearly invisible against the background; fixed by swapping the token.
+ *  - respects `prefers-reduced-motion`: animations and transitions are disabled globally;
+ *  - print styles (training plans can be saved as PDF).
  */
 @import "tailwindcss";
 
@@ -33,7 +33,7 @@
   --danger-soft: #fdeceb;
 }
 
-/* Tailwind v4: expõe as variáveis como utilitários (bg-accent, border-line-strong, text-muted…) */
+/* Tailwind v4: exposes CSS variables as utility classes (bg-accent, border-line-strong, text-muted…) */
 @theme inline {
   --color-bg: var(--bg);
   --color-surface: var(--surface);
@@ -64,6 +64,6 @@
   details { break-inside: avoid; }
 }
 
-/* Conectores animados da landing: o traço "anda" no sentido apps → Evolux → ficha */
+/* Animated landing connectors: dashes travel along apps → Evolux → plan */
 .flow-dash path { stroke-dasharray: 6 6; animation: flow-dash 1.4s linear infinite; }
 @keyframes flow-dash { to { stroke-dashoffset: -12; } }

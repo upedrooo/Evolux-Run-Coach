@@ -2,7 +2,7 @@
   "name": "evolux-portfolio",
   "version": "1.0.0",
   "private": true,
-  "description": "Portfólio do Evolux: documentação, decisões técnicas e exemplos de código com testes.",
+  "description": "Evolux portfolio: documentation, technical decisions, and tested code samples.",
   "type": "module",
   "scripts": {
     "test": "vitest run",

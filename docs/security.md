@@ -1,24 +1,24 @@
-# Segurança e privacidade
+# Security and Privacy
 
-## Controles implementados
+## Implemented Controls
 
-| Área | Controle |
+| Area | Control |
 |---|---|
-| **Autenticação** | Login sem senha (código por e-mail e Google) via Supabase Auth. A verificação do código ocorre no servidor; cookies de sessão com `SameSite=Lax` e `Secure` em produção. |
-| **Autorização** | Rotas protegidas no `proxy.ts` (checagem otimista) **e** revalidação da sessão em cada rota de API. A regra real de acesso a dados fica no banco (RLS). |
-| **Isolamento de dados** | RLS em `profiles` e `plans`: cada usuário só lê as próprias linhas. Usuários logados não têm permissão de escrita. |
-| **Cota de uso** | Funções SQL `SECURITY DEFINER` com `search_path` fixo, executáveis só pelo papel de serviço; reserva atômica. Ver [`quota-and-rls.sql`](../code-samples/sql/quota-and-rls.sql). |
-| **Segredos** | A chave de serviço do banco e a da IA existem só no servidor (sem prefixo `NEXT_PUBLIC_`), marcadas como sensíveis na hospedagem. Arquivos `.env*` fora do Git e do upload de deploy. |
-| **Validação de entrada** | Esquemas zod em todas as rotas, com limites de tamanho de corpo, de quantidade de treinos e faixas plausíveis (distância, ritmo, idade, peso). |
-| **Prompt injection** | Texto livre do usuário é delimitado como dado, com instrução explícita de ignorá-lo como comando; a saída da IA passa por esquema e regras, então instruções injetadas não conseguem alterar limites de segurança. |
-| **Privacidade dos treinos** | Arquivos são lidos no navegador; coordenadas GPS nunca são enviadas nem armazenadas. |
-| **Cabeçalhos HTTP** | `X-Content-Type-Options`, `X-Frame-Options: DENY`, `Referrer-Policy`, `Permissions-Policy`; HSTS pela plataforma. |
-| **Indexação** | `robots.txt` bloqueia áreas logadas e API; o sitemap lista apenas páginas públicas. |
-| **Erros** | Mensagens ao usuário não vazam detalhes do provedor; detalhes técnicos ficam só nos logs do servidor. |
+| **Authentication** | Passwordless login (email OTP and Google) via Supabase Auth. Code verification runs on the server; session cookies use `SameSite=Lax` and `Secure` in production. |
+| **Authorization** | Routes guarded in `proxy.ts` (optimistic check) **plus** session revalidation in every API route. True data access enforcement lives in PostgreSQL (RLS). |
+| **Data isolation** | RLS on `profiles` and `plans`: each user can only read their own rows. Authenticated users have no direct write privileges. |
+| **Usage quota** | `SECURITY DEFINER` SQL functions with a fixed `search_path`, executable only by `service_role`; atomic reservation. See [`quota-and-rls.sql`](../code-samples/sql/quota-and-rls.sql). |
+| **Secrets** | Database service-role key and AI API key exist only on the server (never `NEXT_PUBLIC_`), marked sensitive in hosting config. `.env*` files excluded from Git and deploy uploads. |
+| **Input validation** | Zod schemas on all routes with body-size caps, workout count limits, and plausible ranges (distance, pace, age, weight). |
+| **Prompt injection** | User free-text is delimited as data with explicit instructions to ignore it as commands; AI output is checked by schema and business rules, so injected prompts cannot relax safety limits. |
+| **Workout privacy** | Files are parsed in the browser; GPS coordinates are never transmitted or stored. |
+| **HTTP headers** | `X-Content-Type-Options`, `X-Frame-Options: DENY`, `Referrer-Policy`, `Permissions-Policy`; HSTS provided by the platform. |
+| **Indexing** | `robots.txt` blocks authenticated areas and API routes; sitemap lists public pages only. |
+| **Error handling** | User-facing messages never leak provider internals; technical details stay in server logs. |
 
-## Riscos conhecidos e próximos passos
+## Known Risks and Next Steps
 
-- **Política de privacidade (LGPD):** o formulário coleta idade, peso, sexo e, opcionalmente, informações de saúde (dado sensível). Há consentimento explícito no fluxo, mas a página com a política completa ainda está no roadmap.
-- **Provedor de IA gratuito:** alguns provedores podem usar dados enviados para melhorar produtos. Mitigação atual: consentimento no formulário e envio apenas de resumos; próximo passo é oferecer provedor sem retenção.
-- **Abuso por múltiplas contas:** o limite é por conta; captcha e limite por IP estão previstos.
-- **Rotação de chaves:** política para trocar periodicamente as chaves de serviço e de IA.
+- **Privacy policy (LGPD — Brazil's data protection law):** the form collects age, weight, sex, and optionally health notes (sensitive data). Explicit consent is collected in the flow, while a dedicated full privacy policy page is on the roadmap.
+- **Free-tier AI provider:** some providers may use submitted prompts to improve products. Current mitigation: explicit user consent in the form and sending only compact summaries; next step is moving to a zero-retention provider tier.
+- **Multi-account abuse:** quotas are currently per account; CAPTCHA and IP rate limiting are planned.
+- **Key rotation:** formal schedule to periodically rotate service and AI API keys.

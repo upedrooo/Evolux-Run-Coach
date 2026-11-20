@@ -1,14 +1,14 @@
 import { describe, expect, it } from "vitest";
 import { fmtPace, paceAtFraction, trainingPaces, vdotFromEffort } from "../pace-zones";
 
-describe("VDOT e zonas de ritmo (validadas contra as tabelas publicadas)", () => {
-  it("5 km em 19:57 e 10 km em 41:21 dão VDOT ≈ 50", () => {
+describe("VDOT and pace zones (verified against published tables)", () => {
+  it("5 km in 19:57 and 10 km in 41:21 yield VDOT ≈ 50", () => {
     expect(vdotFromEffort(5000, 19 * 60 + 57)).toBeCloseTo(50, 0);
     expect(vdotFromEffort(10000, 41 * 60 + 21)).toBeCloseTo(50, 0);
   });
 
-  it("ritmos de referência para VDOT 50 (tolerância de ±6 s/km)", () => {
-    // Tabela: maratona ≈ 4:31, limiar ≈ 4:15, intervalado ≈ 3:56 /km
+  it("reference paces for VDOT 50 (±6 s/km tolerance)", () => {
+    // Table: marathon ≈ 4:31, threshold ≈ 4:15, interval ≈ 3:56 /km
     expect(paceAtFraction(50, 0.82)).toBeGreaterThan(4 * 60 + 25);
     expect(paceAtFraction(50, 0.82)).toBeLessThan(4 * 60 + 37);
     expect(paceAtFraction(50, 0.88)).toBeGreaterThan(4 * 60 + 9);
@@ -17,7 +17,7 @@ describe("VDOT e zonas de ritmo (validadas contra as tabelas publicadas)", () =>
     expect(paceAtFraction(50, 0.98)).toBeLessThan(4 * 60 + 2);
   });
 
-  it("as zonas ficam ordenadas: leve é mais lenta que maratona, limiar, intervalado e repetição", () => {
+  it("zones are strictly ordered: Easy slower than Marathon, Threshold, Interval, and Repetition", () => {
     const p = trainingPaces(45);
     expect(p.E.fastSecKm).toBeGreaterThan(p.M.slowSecKm - 1);
     expect(p.M.fastSecKm).toBeGreaterThan(p.T.slowSecKm - 1);
@@ -26,7 +26,7 @@ describe("VDOT e zonas de ritmo (validadas contra as tabelas publicadas)", () =>
     for (const z of Object.values(p)) expect(z.fastSecKm).toBeLessThan(z.slowSecKm);
   });
 
-  it("formata o ritmo como m:ss", () => {
+  it("formats pace as m:ss", () => {
     expect(fmtPace(359.6)).toBe("6:00");
     expect(fmtPace(305)).toBe("5:05");
   });

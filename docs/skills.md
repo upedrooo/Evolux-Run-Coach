@@ -1,60 +1,60 @@
-# Mapa de competências
+# Skills Matrix
 
-Cada linha aponta onde ver a evidência neste repositório.
+Each row points to concrete evidence in this repository.
 
 ## Front-end
-| Competência | Evidência |
+| Skill | Evidence |
 |---|---|
-| React 19 e Next.js 16 (App Router, Server Components, Route Handlers, `proxy.ts`) | [Arquitetura](architecture.md), [Desafios #6](challenges.md) |
-| TypeScript estrito, tipos discriminados e genéricos | [`plan-api-flow.ts`](../code-samples/typescript/plan-api-flow.ts), [`llm-output-guards.ts`](../code-samples/typescript/llm-output-guards.ts) |
-| Componentização e acessibilidade (rótulos, estados vazios, foco, `aria-*`) | [`AttachedFiles.tsx`](../code-samples/react/AttachedFiles.tsx) |
-| Tailwind CSS v4 e design tokens | [`design-tokens.css`](../code-samples/css/design-tokens.css) |
-| Layout responsivo avançado (uma tela, container query units) | [Decisões #8](decisions.md) |
-| Formulário em etapas com validação no cliente e no servidor | Telas 04, 05 e 06 no [README](../README.md) |
-| Processamento de arquivos no navegador (XML, binário FIT, ZIP) | [`gpx-parser.ts`](../code-samples/typescript/gpx-parser.ts) |
+| React 19 & Next.js 16 (App Router, Server Components, Route Handlers, `proxy.ts`) | [Architecture](architecture.md), [Challenges #6](challenges.md) |
+| Strict TypeScript, discriminated unions, and generics | [`plan-api-flow.ts`](../code-samples/typescript/plan-api-flow.ts), [`llm-output-guards.ts`](../code-samples/typescript/llm-output-guards.ts) |
+| Component design & accessibility (labels, empty states, focus, `aria-*`) | [`AttachedFiles.tsx`](../code-samples/react/AttachedFiles.tsx) |
+| Tailwind CSS v4 & design tokens | [`design-tokens.css`](../code-samples/css/design-tokens.css) |
+| Advanced responsive layout (single-screen, container query units) | [Decisions #8](decisions.md) |
+| Multi-step wizard with client and server validation | Screenshots 04, 05, and 06 in [README](../README.md) |
+| Client-side file processing (XML, binary FIT, ZIP) | [`gpx-parser.ts`](../code-samples/typescript/gpx-parser.ts) |
 
-## Back-end e APIs
-| Competência | Evidência |
+## Back-end & APIs
+| Skill | Evidence |
 |---|---|
-| Design de APIs REST com validação (zod), códigos HTTP e erros claros | [`plan-api-flow.ts`](../code-samples/typescript/plan-api-flow.ts) |
-| Autenticação sem senha, sessões e cookies | [`remember-me-cookies.ts`](../code-samples/typescript/remember-me-cookies.ts), [Segurança](security.md) |
-| Injeção de dependências e código testável | [`plan-api-flow.test.ts`](../code-samples/typescript/__tests__/plan-api-flow.test.ts) |
-| Resiliência: timeouts, `AbortSignal`, fallback e *retries* com feedback | [`llm-fallback.ts`](../code-samples/typescript/llm-fallback.ts) |
+| REST API design with Zod validation, HTTP status codes, and clear errors | [`plan-api-flow.ts`](../code-samples/typescript/plan-api-flow.ts) |
+| Passwordless authentication, sessions, and cookies | [`remember-me-cookies.ts`](../code-samples/typescript/remember-me-cookies.ts), [Security](security.md) |
+| Dependency injection & testable architecture | [`plan-api-flow.test.ts`](../code-samples/typescript/__tests__/plan-api-flow.test.ts) |
+| Resilience: timeouts, `AbortSignal`, fallback, and feedback-driven retries | [`llm-fallback.ts`](../code-samples/typescript/llm-fallback.ts) |
 
-## Dados e banco
-| Competência | Evidência |
+## Data & Databases
+| Skill | Evidence |
 |---|---|
-| Modelagem relacional, `jsonb`, índices e gatilhos | [`quota-and-rls.sql`](../code-samples/sql/quota-and-rls.sql) |
-| Row Level Security e privilégios por papel | [`quota-and-rls.sql`](../code-samples/sql/quota-and-rls.sql), [Segurança](security.md) |
-| Operações atômicas e concorrência | [`quota-and-rls.test.ts`](../code-samples/sql/quota-and-rls.test.ts) |
-| Testar SQL com PostgreSQL real embutido | [Testes](testing.md) |
+| Relational modeling, `jsonb`, indexes, and triggers | [`quota-and-rls.sql`](../code-samples/sql/quota-and-rls.sql) |
+| Row Level Security & role-based privileges | [`quota-and-rls.sql`](../code-samples/sql/quota-and-rls.sql), [Security](security.md) |
+| Atomic operations & concurrency control | [`quota-and-rls.test.ts`](../code-samples/sql/quota-and-rls.test.ts) |
+| Testing SQL against real embedded PostgreSQL | [Testing](testing.md) |
 
-## Inteligência artificial aplicada
-| Competência | Evidência |
+## Applied AI
+| Skill | Evidence |
 |---|---|
-| Arquitetura híbrida (algoritmos + LLM) e engenharia de prompt com regras | [IA × código](ai-and-scripts.md) |
-| Validação e autocorreção da saída da LLM | [`llm-output-guards.ts`](../code-samples/typescript/llm-output-guards.ts) |
-| Integração multi-modelo/multi-provedor e otimização de custo | [`llm-fallback.ts`](../code-samples/typescript/llm-fallback.ts) |
-| Mitigação de *prompt injection* | [Segurança](security.md) |
+| Hybrid architecture (deterministic algorithms + LLM) & rule-constrained prompting | [AI vs. code](ai-and-scripts.md) |
+| LLM output validation & self-repair | [`llm-output-guards.ts`](../code-samples/typescript/llm-output-guards.ts) |
+| Multi-model / multi-provider integration & cost optimization | [`llm-fallback.ts`](../code-samples/typescript/llm-fallback.ts) |
+| Prompt injection mitigation | [Security](security.md) |
 
-## Algoritmos e domínio
-| Competência | Evidência |
+## Algorithms & Domain Modeling
+| Skill | Evidence |
 |---|---|
-| Implementar modelos científicos publicados (VDOT) e validá-los contra tabelas | [`pace-zones.ts`](../code-samples/typescript/pace-zones.ts) |
-| Modelagem de periodização (sobrecarga progressiva, recuperação, polimento) | [`training-skeleton.ts`](../code-samples/typescript/training-skeleton.ts) |
-| Geoprocessamento básico (Haversine, filtragem de ruído de GPS) | [`gpx-parser.ts`](../code-samples/typescript/gpx-parser.ts) |
+| Implementing published scientific models (VDOT) and verifying against reference tables | [`pace-zones.ts`](../code-samples/typescript/pace-zones.ts) |
+| Periodization modeling (progressive overload, cutback weeks, tapering) | [`training-skeleton.ts`](../code-samples/typescript/training-skeleton.ts) |
+| Geospatial basics (Haversine, GPS noise filtering) | [`gpx-parser.ts`](../code-samples/typescript/gpx-parser.ts) |
 
-## Qualidade e DevOps
-| Competência | Evidência |
+## Quality & DevOps
+| Skill | Evidence |
 |---|---|
-| Testes unitários, de propriedade, de integração e de banco | [Testes](testing.md) |
-| QA visual automatizado | [Testes](testing.md) |
-| Deploy, domínio próprio, DNS, variáveis de ambiente e segredos | [Arquitetura](architecture.md), [Decisões #9](decisions.md) |
-| Diagnóstico de problemas de build e ambiente | [Desafios #7 e #8](challenges.md) |
+| Unit, property-based, integration, and database tests | [Testing](testing.md) |
+| Automated visual QA | [Testing](testing.md) |
+| Deployments, custom domain, DNS, environment variables, and secrets | [Architecture](architecture.md), [Decisions #9](decisions.md) |
+| Build and environment troubleshooting | [Challenges #7 & #8](challenges.md) |
 
-## Produto, UX e segurança
-| Competência | Evidência |
+## Product, UX & Security
+| Skill | Evidence |
 |---|---|
-| Fluxos de UX enxutos, estados de erro/vazio e mensagens claras | [README](../README.md) (telas) |
-| Privacidade por projeto e LGPD | [Segurança](security.md) |
-| Decisões documentadas com trade-offs | [Decisões](decisions.md) |
+| Lean UX flows, error/empty states, and clear messaging | [README](../README.md) (screenshots) |
+| Privacy by design & LGPD compliance | [Security](security.md) |
+| Documented trade-offs and architectural decisions | [Decisions](decisions.md) |

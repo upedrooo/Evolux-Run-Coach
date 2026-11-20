@@ -1,27 +1,27 @@
-# Arquitetura
+# Architecture
 
-## Visão geral
+## Overview
 
-O Evolux é uma aplicação **Next.js (App Router)** hospedada na Vercel, com **Supabase** (PostgreSQL + Auth) como camada de dados e uma **LLM** (Google Gemini) usada apenas para redigir as sessões de treino. Todo o restante da inteligência do plano é código determinístico.
+Evolux is a **Next.js (App Router)** application hosted on Vercel, backed by **Supabase** (PostgreSQL + Auth) and an **LLM** (Google Gemini) used strictly to write the training sessions. Everything else in the training engine is deterministic code.
 
 ```mermaid
 flowchart TB
-  subgraph Cliente["Navegador"]
-    UI["Interface React"]
-    PARSE["Parsers de arquivo: GPX, TCX, FIT, CSV, ZIP"]
+  subgraph Client["Browser"]
+    UI["React UI"]
+    PARSE["File parsers: GPX, TCX, FIT, CSV, ZIP"]
   end
-  subgraph Vercel["Next.js na Vercel"]
-    PROXY["proxy.ts: renova sessão e protege rotas"]
-    PAGES["Server Components: painel e ficha"]
+  subgraph Vercel["Next.js on Vercel"]
+    PROXY["proxy.ts: refreshes session & guards routes"]
+    PAGES["Server Components: dashboard & plan view"]
     API["Route Handlers: /api/auth/*, /api/plan"]
-    CORE["Núcleo do treino: métricas, VDOT, volume, prompt, validação"]
+    CORE["Training core: metrics, VDOT, volume, prompt, validation"]
   end
-  subgraph Dados["Supabase"]
-    AUTH["Auth: OTP por e-mail e Google"]
-    PG[("PostgreSQL + RLS + funções de cota")]
+  subgraph Data["Supabase"]
+    AUTH["Auth: email OTP & Google"]
+    PG[("PostgreSQL + RLS + quota functions")]
   end
-  MAIL["SMTP transacional (Resend)"]
-  LLM["API do Gemini"]
+  MAIL["Transactional SMTP (Resend)"]
+  LLM["Gemini API"]
 
   UI --> PARSE
   UI --> API
@@ -34,79 +34,79 @@ flowchart TB
   AUTH --> MAIL
 ```
 
-## Ciclo de uma requisição de plano
+## Plan Request Lifecycle
 
 ```mermaid
 sequenceDiagram
   autonumber
-  participant U as Navegador
+  participant U as Browser
   participant A as POST /api/plan
   participant D as PostgreSQL
   participant L as LLM
 
-  U->>A: formulário + resumo dos treinos (JSON)
-  A->>A: valida sessão e esquema (zod)
-  A->>A: calcula métricas, VDOT, zonas e volume semanal
-  Note over A: erros até aqui não consomem cota
-  A->>D: claim_plan_slot(usuário, limite)
-  alt limite atingido
+  U->>A: form data + workout summary (JSON)
+  A->>A: validate session & schema (zod)
+  A->>A: compute metrics, VDOT, zones & weekly volume
+  Note over A: errors up to this point do not consume quota
+  A->>D: claim_plan_slot(user, limit)
+  alt quota reached
     D-->>A: false
-    A-->>U: 403 (a IA não é chamada)
-  else vaga reservada
+    A-->>U: 403 (AI is never called)
+  else slot reserved
     D-->>A: true
-    A->>L: prompt com estrutura pronta
-    L-->>A: JSON das sessões
-    A->>A: valida regras e normaliza
-    opt reprovado
-      A->>L: nova tentativa com a lista de erros
+    A->>L: prompt with precomputed skeleton
+    L-->>A: sessions JSON
+    A->>A: validate rules & normalize
+    opt rejected
+      A->>L: retry with exact error list
     end
-    A->>D: salva a ficha
-    A-->>U: 200 com o id
+    A->>D: save plan
+    A-->>U: 200 with plan id
   end
-  Note over A,D: qualquer falha após a reserva chama refund_plan_slot
+  Note over A,D: any failure after reservation calls refund_plan_slot
 ```
 
-## Modelo de dados
+## Data Model
 
 ```mermaid
 erDiagram
-  AUTH_USERS ||--|| PROFILES : "1 perfil por usuário (trigger)"
-  AUTH_USERS ||--o{ PLANS : "possui"
+  AUTH_USERS ||--|| PROFILES : "1 profile per user (trigger)"
+  AUTH_USERS ||--o{ PLANS : "owns"
   PROFILES {
     uuid id PK
-    int plans_used "0..N, contador de fichas"
+    int plans_used "0..N, generated plan counter"
     timestamptz created_at
   }
   PLANS {
     uuid id PK
     uuid user_id FK
-    text goal "ex.: Correr 10 km em 55 min"
-    jsonb plan "ficha completa"
+    text goal "e.g., Run 10 km in 55 min"
+    jsonb plan "full training plan"
     timestamptz created_at
   }
 ```
 
-- **Leitura:** o usuário lê só as próprias linhas (políticas RLS).
-- **Escrita:** somente pelo servidor, com a chave de serviço.
-- **Cota:** funções `claim_plan_slot` e `refund_plan_slot`, executáveis apenas pelo papel de serviço.
+- **Reads:** users can only read their own rows (RLS policies).
+- **Writes:** server-only, using the service role key.
+- **Quota:** `claim_plan_slot` and `refund_plan_slot` functions, executable only by `service_role`.
 
-## Camadas do código (repositório privado)
+## Codebase Layers (Private Repository)
 
 ```
-app/            páginas (landing, login, painel, novo plano, ficha) e rotas de API
-components/     assistente de 3 passos, login, logo, ilustração de integração
-lib/parsing/    leitura de GPX, TCX, FIT, CSV, ZIP e GZ (roda no navegador)
-lib/coach/      métricas, VDOT/ritmos, esqueleto de volume, prompt, validações
-lib/llm/        cliente de LLM com fallback de modelos e prazos
-lib/supabase/   clientes (servidor, admin, proxy) e política de cookies de sessão
-proxy.ts        renovação de sessão e proteção de rotas (substitui o middleware no Next 16)
-supabase/       migração SQL: tabelas, RLS, gatilhos e funções
-tests/          testes unitários, de SQL e servidor simulado para testes manuais
+app/            pages (landing, login, dashboard, new plan, plan view) & API routes
+components/     3-step wizard, login, logo, integration illustration
+lib/parsing/    GPX, TCX, FIT, CSV, ZIP, and GZ parsers (runs in the browser)
+lib/coach/      metrics, VDOT/paces, volume skeleton, prompt builder, validators
+lib/llm/        LLM client with model fallback and timeouts
+lib/supabase/   clients (server, admin, proxy) & session cookie policy
+proxy.ts        session refresh & route protection (replaces middleware in Next 16)
+supabase/       SQL migration: tables, RLS, triggers, and functions
+tests/          unit tests, SQL tests, and mock server for manual testing
 ```
 
-## Implantação
+## Deployment
 
-- **Hospedagem:** Vercel, com deploy de produção pela CLI e variáveis de ambiente separadas entre públicas (`NEXT_PUBLIC_*`) e secretas.
-- **Domínio:** domínio próprio com HTTPS automático; `www` redireciona para o domínio principal.
-- **E-mail:** códigos de acesso enviados por SMTP transacional a partir do domínio verificado.
-- **Segurança em produção:** cookies `Secure`, cabeçalhos (`X-Content-Type-Options`, `X-Frame-Options`, `Referrer-Policy`, `Permissions-Policy`), `robots.txt` e `sitemap.xml`. Detalhes em [security.md](security.md).
+- **Hosting:** Vercel, deployed via CLI with environment variables split between public (`NEXT_PUBLIC_*`) and server-only secrets.
+- **Domain:** custom domain with automatic HTTPS; `www` redirects to the apex domain.
+- **Email:** sign-in codes sent over transactional SMTP from the verified domain.
+- **Production hardening:** `Secure` cookies, security headers (`X-Content-Type-Options`, `X-Frame-Options`, `Referrer-Policy`, `Permissions-Policy`), `robots.txt`, and `sitemap.xml`. See [security.md](security.md) for details.

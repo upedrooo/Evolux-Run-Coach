@@ -1,16 +1,16 @@
--- Limite de uso por conta + isolamento de dados (PostgreSQL / Supabase)
+-- Per-account usage quota + data isolation (PostgreSQL / Supabase)
 --
--- Requisitos que este esquema resolve:
---   1) cada usuário só pode LER os próprios dados (Row Level Security);
---   2) o limite de N fichas por conta não pode ser burlado, nem por requisições simultâneas,
---      nem pelo próprio usuário chamando a API do banco diretamente.
+-- Requirements solved by this schema:
+--   1) each user can only READ their own data (Row Level Security);
+--   2) the limit of N plans per account cannot be bypassed—neither by concurrent requests
+--      nor by the user calling the database API directly.
 --
--- Decisões:
---   * Toda ESCRITA passa pelo servidor com a chave de serviço (service_role); usuários só têm SELECT.
---   * A reserva de vaga é um UPDATE condicional dentro de uma função: o banco garante a atomicidade,
---     então duas requisições ao mesmo tempo nunca ultrapassam o limite.
---   * As funções de cota NÃO são executáveis por usuários logados: se pudessem chamar
---     `refund_plan_slot`, poderiam devolver vagas para si mesmos.
+-- Decisions:
+--   * All WRITES go through the server using the service role key (`service_role`); users only get SELECT.
+--   * Slot reservation is a conditional UPDATE inside a function: PostgreSQL guarantees atomicity,
+--     so two simultaneous requests can never exceed the cap.
+--   * Quota functions are NOT executable by authenticated users: if they could call
+--     `refund_plan_slot`, they could refund slots for themselves.
 
 create table public.profiles (
   id          uuid primary key references auth.users (id) on delete cascade,
@@ -22,7 +22,7 @@ create table public.plans (
   id          uuid primary key default gen_random_uuid(),
   user_id     uuid not null references auth.users (id) on delete cascade,
   goal        text not null,
-  plan        jsonb not null,            -- ficha gerada (sem coordenadas GPS)
+  plan        jsonb not null,            -- generated plan (no GPS coordinates)
   created_at  timestamptz not null default now()
 );
 create index plans_user_created_idx on public.plans (user_id, created_at desc);
@@ -30,13 +30,13 @@ create index plans_user_created_idx on public.plans (user_id, created_at desc);
 alter table public.profiles enable row level security;
 alter table public.plans    enable row level security;
 
--- (select auth.uid()) em subconsulta: o Postgres avalia uma vez por consulta, não por linha (mais rápido).
-create policy "profiles: ler o próprio" on public.profiles
+-- `(select auth.uid())` in a subquery: Postgres evaluates it once per query instead of per row (faster).
+create policy "profiles: read own" on public.profiles
   for select to authenticated using (id = (select auth.uid()));
-create policy "plans: ler as próprias" on public.plans
+create policy "plans: read own" on public.plans
   for select to authenticated using (user_id = (select auth.uid()));
 
--- Cria o perfil automaticamente no cadastro (e-mail ou Google).
+-- Automatically create a profile on signup (email or Google).
 create function public.handle_new_user() returns trigger
 language plpgsql security definer set search_path = '' as $$
 begin
@@ -47,12 +47,12 @@ $$;
 create trigger on_auth_user_created after insert on auth.users
   for each row execute function public.handle_new_user();
 
--- Reserva atômica de uma vaga: true = reservou, false = limite atingido.
+-- Atomic slot reservation: true = reserved, false = quota reached.
 create function public.claim_plan_slot(p_user uuid, p_max int) returns boolean
 language plpgsql security definer set search_path = '' as $$
 declare used int;
 begin
-  insert into public.profiles (id) values (p_user) on conflict do nothing;  -- usuários anteriores ao trigger
+  insert into public.profiles (id) values (p_user) on conflict do nothing;  -- users created before the trigger
   update public.profiles
      set plans_used = plans_used + 1
    where id = p_user and plans_used < p_max
@@ -61,7 +61,7 @@ begin
 end;
 $$;
 
--- Devolve a vaga quando a geração falha. O contador nunca fica negativo.
+-- Refund a slot when generation fails. Counter never goes negative.
 create function public.refund_plan_slot(p_user uuid) returns void
 language sql security definer set search_path = '' as $$
   update public.profiles set plans_used = greatest(plans_used - 1, 0) where id = p_user;

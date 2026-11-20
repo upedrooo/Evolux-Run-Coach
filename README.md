@@ -2,128 +2,126 @@
 
 # Evolux
 
-**Plano de corrida personalizado, montado a partir do seu histórico de treinos.**
+**Personalized running plan built from your workout history.**
 
-Importe os treinos do Strava, Garmin, Runkeeper e outros, diga sua meta e receba uma ficha semana a semana, com ritmos calculados a partir do seu desempenho real.
+Import workouts from Strava, Garmin, Runkeeper, and others, set your goal, and get a week-by-week training plan with paces calculated from your real performance.
 
-[**evoluxapp.com.br**](https://evoluxapp.com.br) &nbsp;·&nbsp; produto no ar, com login e geração de fichas
+[**evoluxapp.com.br**](https://evoluxapp.com.br) &nbsp;·&nbsp; live in production, with login and plan generation
 
-![Next.js](https://img.shields.io/badge/Next.js_16-000?logo=nextdotjs) ![React](https://img.shields.io/badge/React_19-149eca?logo=react&logoColor=white) ![TypeScript](https://img.shields.io/badge/TypeScript-3178c6?logo=typescript&logoColor=white) ![Tailwind](https://img.shields.io/badge/Tailwind_v4-38bdf8?logo=tailwindcss&logoColor=white) ![PostgreSQL](https://img.shields.io/badge/PostgreSQL-336791?logo=postgresql&logoColor=white) ![Supabase](https://img.shields.io/badge/Supabase-3ecf8e?logo=supabase&logoColor=white) ![Vercel](https://img.shields.io/badge/Vercel-000?logo=vercel) ![Tests](https://img.shields.io/badge/testes-83_automatizados-2b7a4b)
+![Next.js](https://img.shields.io/badge/Next.js_16-000?logo=nextdotjs) ![React](https://img.shields.io/badge/React_19-149eca?logo=react&logoColor=white) ![TypeScript](https://img.shields.io/badge/TypeScript-3178c6?logo=typescript&logoColor=white) ![Tailwind](https://img.shields.io/badge/Tailwind_v4-38bdf8?logo=tailwindcss&logoColor=white) ![PostgreSQL](https://img.shields.io/badge/PostgreSQL-336791?logo=postgresql&logoColor=white) ![Supabase](https://img.shields.io/badge/Supabase-3ecf8e?logo=supabase&logoColor=white) ![Vercel](https://img.shields.io/badge/Vercel-000?logo=vercel) ![Tests](https://img.shields.io/badge/tests-83_automated-2b7a4b)
 
 </div>
 
-> **TL;DR (English):** Evolux is a production web app that builds personalized running plans. Users import workout files (GPX, TCX, FIT, CSV, ZIP) which are parsed **in the browser** (no GPS tracks leave the device), and the backend combines deterministic training science (VDOT pace zones, progressive-overload volume model) with an LLM that only *writes* the sessions inside strict, code-enforced limits. Passwordless auth, per-account quota enforced atomically in PostgreSQL with Row Level Security, resilient multi-model LLM client, 83 automated tests. The full source is private; this repository documents the architecture, decisions and includes tested code excerpts.
-
 ---
 
-## O problema
+## The Problem
 
-Aplicativos populares de corrida oferecem planos de treino, mas os recursos personalizados costumam ficar atrás de planos pagos, e planos "de prateleira" ignoram o que a pessoa **realmente** vem correndo. O Evolux resolve isso lendo o histórico exportado do próprio corredor e transformando-o em uma ficha segura, progressiva e específica para a meta dele (por exemplo, "10 km em 55 minutos").
+Popular running apps offer training plans, but personalized features are usually locked behind paid tiers, and off-the-shelf plans ignore what the runner has **actually** been doing. Evolux solves this by reading the runner's own exported workout history and turning it into a safe, progressive training plan tailored to their goal (for example, "10 km in 55 minutes").
 
-## Como funciona para o usuário
+## How It Works
 
-1. **Meta:** quantos quilômetros quer correr e em quanto tempo (ou "não me importo com o tempo").
-2. **Perfil:** dias disponíveis, nível, idade, peso, sexo e observações (lesões, preferências). Opcionalmente, anexa os arquivos de treino.
-3. **Ficha completa:** de 6 a 16 semanas, com volume, sessões, ritmos por zona, semanas de recuperação, polimento e o dia da meta.
+1. **Goal:** choose the target distance and target time (or "I don't care about time").
+2. **Profile:** available days, experience level, age, weight, sex, and notes (injuries, preferences). Optionally attach workout files.
+3. **Full plan:** 6 to 16 weeks with weekly volume, workouts, pace zones, cutback weeks, taper, and race/goal day.
 
-## Telas
+## Screenshots
 
-> Capturas geradas por script a partir do build de produção do app, rodando contra um backend simulado com **dados de exemplo** (nenhum dado real de usuário).
+> Captured via script from the production build running against a mock backend with **sample data** (no real user data). The UI shown is in Portuguese, the product's initial launch language.
 
 | Landing (desktop) | Landing (mobile) |
 |---|---|
 | ![Landing desktop](assets/screenshots/01-landing-desktop.png) | <img src="assets/screenshots/02-landing-mobile.png" width="260" alt="Landing mobile"> |
 
-| Assistente em 3 passos | |
+| 3-step wizard | |
 |---|---|
-| ![Passo 1](assets/screenshots/04-novo-passo1-distancia.png) | ![Passo 2](assets/screenshots/05-novo-passo2-tempo.png) |
+| ![Step 1](assets/screenshots/04-new-step1-distance.png) | ![Step 2](assets/screenshots/05-new-step2-time.png) |
 
-| Perfil + arquivos anexados | Ficha gerada |
+| Profile + attached files | Generated plan |
 |---|---|
-| ![Passo 3](assets/screenshots/06-novo-passo3-perfil-e-arquivos.png) | ![Ficha](assets/screenshots/07-ficha-topo.png) |
+| ![Step 3](assets/screenshots/06-new-step3-profile-and-files.png) | ![Plan](assets/screenshots/07-plan-top.png) |
 
-| Semanas da ficha | Painel |
+| Plan weeks | Dashboard |
 |---|---|
-| ![Semanas](assets/screenshots/08-ficha-semanas.png) | ![Painel](assets/screenshots/09-painel.png) |
+| ![Weeks](assets/screenshots/08-plan-weeks.png) | ![Dashboard](assets/screenshots/09-dashboard.png) |
 
-## Destaques técnicos
+## Technical Highlights
 
-| Tema | O que foi feito | Detalhes |
+| Topic | What was built | Details |
 |---|---|---|
-| **Ciência no código, texto na IA** | Volume, progressão, ritmos (VDOT), datas e avisos são calculados por algoritmos determinísticos. A LLM só escolhe e escreve as sessões dentro de limites impostos e revalidados em código. | [IA × código](docs/ai-and-scripts.md) |
-| **Saída de LLM não é confiável** | Validação por regras, correção automática de casos comuns e nova tentativa com a lista de erros. Se falhar de novo, o pedido é abortado e o usuário não é cobrado. | [`llm-output-guards.ts`](code-samples/typescript/llm-output-guards.ts) |
-| **Resiliência de provedor gratuito** | Lista de modelos com prazo por modelo: um 503 lento não consome mais o orçamento da requisição. | [`llm-fallback.ts`](code-samples/typescript/llm-fallback.ts) |
-| **Cota à prova de concorrência** | Limite de fichas por conta imposto no banco com `UPDATE` condicional atômico; funções de cota inacessíveis a usuários logados; RLS de leitura. Testado num PostgreSQL embutido. | [`quota-and-rls.sql`](code-samples/sql/quota-and-rls.sql) |
-| **Privacidade por projeto** | Arquivos de treino são lidos **no navegador**; só data, distância, tempo e FC saem do dispositivo. Nenhuma coordenada GPS é enviada nem guardada. | [`gpx-parser.ts`](code-samples/typescript/gpx-parser.ts) |
-| **Login sem senha** | Código por e-mail e Google. "Mantenha-me conectado" controlado no servidor, alternando entre cookie persistente e cookie de sessão. | [`remember-me-cookies.ts`](code-samples/typescript/remember-me-cookies.ts) |
-| **Orquestração testável** | Fluxo de criação do plano com injeção de dependências: autentica, valida, reserva vaga, gera, salva e devolve a vaga em qualquer falha. | [`plan-api-flow.ts`](code-samples/typescript/plan-api-flow.ts) |
-| **Design system e acessibilidade** | Tokens semânticos, contraste de bordas medido (≥ 3:1 nos controles), `prefers-reduced-motion`, landing de **uma tela só** (sem rolagem) em 4 tamanhos de celular e desktop. | [`design-tokens.css`](code-samples/css/design-tokens.css) |
-| **Qualidade** | 83 testes automatizados (parsers de arquivos reais, algoritmos, cliente de LLM, SQL/RLS) e capturas de tela automatizadas para QA visual. | [Testes](docs/testing.md) |
+| **Science in code, text in AI** | Volume, progression, pace zones (VDOT), dates, and warnings are computed by deterministic algorithms. The LLM only picks and writes the workouts inside strict limits enforced and revalidated in code. | [AI vs. code](docs/ai-and-scripts.md) |
+| **Untrusted LLM output** | Rule-based validation, deterministic normalization for common mistakes, and a self-repair retry with the exact error list. If it fails again, the request aborts and the user's quota is refunded. | [`llm-output-guards.ts`](code-samples/typescript/llm-output-guards.ts) |
+| **Free-tier provider resilience** | Configurable model list with a per-model timeout: a slow 503 no longer drains the entire request budget. | [`llm-fallback.ts`](code-samples/typescript/llm-fallback.ts) |
+| **Concurrency-safe quota** | Per-account plan limit enforced in PostgreSQL via an atomic conditional `UPDATE`; quota functions revoked from authenticated users; read-only RLS. Tested against embedded PostgreSQL. | [`quota-and-rls.sql`](code-samples/sql/quota-and-rls.sql) |
+| **Privacy by design** | Workout files are parsed **in the browser**; only date, distance, duration, and heart rate leave the device. No GPS coordinates are ever sent or stored. | [`gpx-parser.ts`](code-samples/typescript/gpx-parser.ts) |
+| **Passwordless login** | Email OTP and Google sign-in. Server-controlled "Keep me signed in" switching between persistent cookies and session cookies. | [`remember-me-cookies.ts`](code-samples/typescript/remember-me-cookies.ts) |
+| **Testable orchestration** | Plan creation flow built with dependency injection: authenticates, validates, claims a quota slot, generates, saves, and refunds the slot on any failure. | [`plan-api-flow.ts`](code-samples/typescript/plan-api-flow.ts) |
+| **Design system & accessibility** | Semantic tokens, measured border contrast (≥ 3:1 on controls), `prefers-reduced-motion`, and a **single-screen** landing page (no scroll) tested across 4 mobile viewports and desktop. | [`design-tokens.css`](code-samples/css/design-tokens.css) |
+| **Quality** | 83 automated tests (real-format file parsers, training algorithms, LLM client, SQL/RLS) plus automated screenshots for visual QA. | [Testing](docs/testing.md) |
 
-## Arquitetura
+## Architecture
 
 ```mermaid
 flowchart LR
-  subgraph B["Navegador"]
-    F["Arquivos GPX / TCX / FIT / CSV / ZIP"] --> P["Parsers no cliente"]
-    P -->|"só data, distância, tempo, FC"| W["Assistente em 3 passos"]
+  subgraph B["Browser"]
+    F["GPX / TCX / FIT / CSV / ZIP files"] --> P["Client-side parsers"]
+    P -->|"date, distance, duration, HR only"| W["3-step wizard"]
   end
-  W -->|"JSON validado (zod)"| API["POST /api/plan"]
-  subgraph V["Next.js na Vercel"]
-    API --> S["Sessão (Supabase Auth)"]
-    S --> C["Cálculo determinístico: métricas, VDOT, volume semanal"]
-    C --> Q["Reserva atômica de vaga"]
-    Q --> L["Cliente de LLM com fallback"]
-    L --> G["Validação + auto-correção"]
-    G --> SV["Salva a ficha"]
+  W -->|"validated JSON (zod)"| API["POST /api/plan"]
+  subgraph V["Next.js on Vercel"]
+    API --> S["Session (Supabase Auth)"]
+    S --> C["Deterministic engine: metrics, VDOT, weekly volume"]
+    C --> Q["Atomic quota reservation"]
+    Q --> L["LLM client with fallback"]
+    L --> G["Validation + self-repair"]
+    G --> SV["Save plan"]
   end
   Q <--> DB[("PostgreSQL + RLS")]
   SV --> DB
-  L <--> AI["API do Gemini"]
-  U["Usuário"] -. "código por e-mail / Google" .-> AU["Supabase Auth"]
+  L <--> AI["Gemini API"]
+  U["User"] -. "email OTP / Google" .-> AU["Supabase Auth"]
 ```
 
-Mais detalhes, sequência de uma requisição e modelo de dados em [`docs/architecture.md`](docs/architecture.md).
+More details, request sequence, and data model in [`docs/architecture.md`](docs/architecture.md).
 
-## Stack
+## Tech Stack
 
-- **Front-end:** Next.js 16 (App Router, React 19), TypeScript, Tailwind CSS v4, tokens de design próprios
-- **Back-end:** rotas de API do Next.js (Node), validação com zod, cliente de LLM independente de provedor
-- **Dados e auth:** PostgreSQL (Supabase) com Row Level Security e funções SQL; Supabase Auth (OTP por e-mail e Google)
-- **IA:** Google Gemini via API REST, com fallback entre modelos
-- **Arquivos:** fast-xml-parser (GPX/TCX), fit-file-parser (FIT), fflate (ZIP/GZ)
-- **Infra:** Vercel (deploy pela CLI), domínio próprio, e-mail transacional via SMTP (Resend), cabeçalhos de segurança
-- **Testes:** Vitest, PGlite (PostgreSQL em WebAssembly), Puppeteer para capturas de tela
+- **Front-end:** Next.js 16 (App Router, React 19), TypeScript, Tailwind CSS v4, custom design tokens
+- **Back-end:** Next.js Route Handlers (Node), Zod validation, provider-agnostic LLM client
+- **Data & Auth:** PostgreSQL (Supabase) with Row Level Security and SQL functions; Supabase Auth (email OTP & Google)
+- **AI:** Google Gemini via REST API, with multi-model fallback
+- **Files:** fast-xml-parser (GPX/TCX), fit-file-parser (FIT), fflate (ZIP/GZ)
+- **Infra:** Vercel (CLI deployments), custom domain, transactional email via SMTP (Resend), security headers
+- **Testing:** Vitest, PGlite (PostgreSQL in WebAssembly), Puppeteer for visual QA screenshots
 
-## Sobre o código-fonte
+## About the Source Code
 
-O repositório do aplicativo é **privado**. Aqui você encontra:
+The application repository is **private**. Here you will find:
 
 ```
 evolux-portfolio/
-├── README.md              você está aqui
-├── docs/                  arquitetura, decisões, IA × código, segurança, testes, desafios, competências
-├── code-samples/          trechos reais, enxutos e comentados, cada um com testes que rodam de forma independente
-│   ├── typescript/        algoritmos, validação de IA, fallback de LLM, parser, cookies, orquestração
-│   ├── sql/               esquema com RLS e cota atômica (+ teste em PostgreSQL embutido)
-│   ├── react/             componente de lista de arquivos com acessibilidade
-│   └── css/               design tokens e animações
-└── assets/screenshots/    capturas do produto
+├── README.md              you are here
+├── docs/                  architecture, decisions, AI vs. code, security, testing, challenges, skills
+├── code-samples/          real, lean, annotated excerpts, each with standalone automated tests
+│   ├── typescript/        algorithms, AI guards, LLM fallback, parser, cookies, orchestration
+│   ├── sql/               RLS schema and atomic quota (+ embedded PostgreSQL tests)
+│   ├── react/             accessible attached-files list component
+│   └── css/               design tokens and animations
+└── assets/screenshots/    product screenshots
 ```
 
-Os trechos são versões didáticas: simplificam constantes e regras de negócio, mas mantêm a lógica e a técnica.
+The excerpts are didactic versions: they simplify constants and business rules while preserving the core logic and engineering patterns.
 
-## Rodando os exemplos
+## Running the Samples
 
 ```bash
 npm install
-npm test          # 40 testes dos exemplos (inclui SQL num PostgreSQL embutido)
+npm test          # 40 sample tests (including SQL on embedded PostgreSQL)
 npm run typecheck
 ```
 
-## Competências demonstradas
+## Demonstrated Skills
 
-Front-end moderno, back-end e APIs, modelagem e segurança de banco de dados, integração com LLM em produção, testes, DevOps e UX/acessibilidade. O mapa completo, com onde ver cada evidência, está em [`docs/skills.md`](docs/skills.md).
+Modern front-end, back-end and APIs, database modeling and security, production LLM integration, testing, DevOps, and UX/accessibility. See the full matrix with links to evidence in [`docs/skills.md`](docs/skills.md).
 
 ## Connect With Me
 
@@ -145,6 +143,6 @@ Front-end moderno, back-end e APIs, modelagem e segurança de banco de dados, in
   </a>
 </p>
 
-## Licença
+## License
 
-Todos os direitos reservados. Os textos, imagens e trechos de código deste repositório são apresentados para fins de portfólio e consulta; não podem ser reutilizados comercialmente sem autorização. Veja [`LICENSE`](LICENSE).
+All rights reserved. The texts, images, and code excerpts in this repository are provided for portfolio and reference purposes only; commercial reuse without permission is prohibited. See [`LICENSE`](LICENSE).
